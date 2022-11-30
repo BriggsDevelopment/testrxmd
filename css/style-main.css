@@ -41,7 +41,7 @@ This file contains the common styles of this theme.
 * blog.scss
 * page.scss
 * footer-top-callout.scss
-* shortcodes 
+* shortcodes
 	* animated-layer-advanced.scss
 	* animated-layer-images.scss
 	* blockquote.scss
@@ -82,7 +82,7 @@ This file contains the common styles of this theme.
 	* features-box.scss
 	* social-links.scss
 	* location-marker.scss
-* widgets 
+* widgets
 	* widgets-common.scss
 	* brochure-box.scss
 	* blog-list.scss
@@ -14859,7 +14859,7 @@ body.tm-dark-layout .tm-sc-staff.staff-style2-classic .staff-content {
       font-size: 22px; }
     .tm-sc-testimonials.testimonial-style2-centered-aligned .tm-testimonial .testimonial-text-holder .author-text {
       font-size: 24px;
-      color: #737373;
+      color: white;
       font-style: normal; }
     .tm-sc-testimonials.testimonial-style2-centered-aligned .tm-testimonial .testimonial-author-details {
       display: block; }
