@@ -58,7 +58,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "static")));
 app.use(cookieParser());
 
-// http://localhost:3000/ - display login page
+require('./routes')(app);
+
+//display login page
 app.get("/login", (request, response) =>
   isLoggedin(
     request,
@@ -76,7 +78,8 @@ app.get("/login", (request, response) =>
     }
   )
 );
-// http://localhost:3000/ - authenticate the user
+
+//authenticate the user
 app.post("/login", (request, response) =>
   init(request, (settings) => {
     // Create variables and assign the post data
@@ -103,7 +106,7 @@ app.post("/login", (request, response) =>
         });
       }
     }
-    // check if the data exists and is not empty j
+    // check if the data exists and is not empty
     if (username && password) {
       // Ensure the captured token matches the session token (CSRF Protection)
       if (
@@ -123,17 +126,6 @@ app.post("/login", (request, response) =>
           console.log(accounts.length, accounts, hashedPassword);
           // If the account exists
           if (accounts.length > 0) {
-            // Twofactor
-
-            if (
-              settings["twofactor_protection"] == "true" &&
-              accounts[0].ip != ip
-            ) {
-              request.session.tfa_id = accounts[0].id;
-              request.session.tfa_email = accounts[0].email;
-              response.send("tfa: twofactor");
-              return response.end();
-            }
             // Make sure account is activated
             if (
               settings["account_activation"] == "true" &&
@@ -219,6 +211,7 @@ app.get("/register", (request, response) =>
     }
   )
 );
+
 // http://localhost:3000/register - register user
 app.post("/register", (request, response) =>
   init(request, (settings) => {
@@ -415,6 +408,7 @@ app.get("/forgotpassword", (request, response) => {
   // Render forgot password template and output message
   response.render("forgotpassword.html");
 });
+
 // http://localhost:3000/forgotpassword - update account details
 app.post("/forgotpassword", (request, response) =>
   init(request, (settings) => {
@@ -509,6 +503,7 @@ app.get("/resetpassword/:email/:code", (request, response) => {
     response.end();
   }
 });
+
 // http://localhost:3000/resetpassword - update password
 app.post("/resetpassword/:email/:code", (request, response) => {
   // Make sure the params are specified
@@ -571,99 +566,6 @@ app.post("/resetpassword/:email/:code", (request, response) => {
   } else {
     response.send("No email and/or code provided!");
     response.end();
-  }
-});
-
-// http://localhost:3000/twofactor - twofactor authentication
-app.get("/twofactor", (request, response) =>
-  init(request, (settings) => {
-    // Check if the tfa session variables are declared
-    if (request.session.tfa_id && request.session.tfa_email) {
-      // Generate a random unique ID
-      let twofactorCode = uuidv1();
-      // Get the twofactor email template
-      let twofactorTemplate = fs
-        .readFileSync(
-          path.join(__dirname, "views/twofactor-email-template.html"),
-          "utf8"
-        )
-        .replaceAll("%code%", twofactorCode);
-      // Change the below mail options
-      let mailOptions = {
-        from: settings["mail_from"],
-        to: request.session.tfa_email,
-        subject: "Your Access Code",
-        text: twofactorTemplate.replace(/<\/?[^>]+(>|$)/g, ""),
-        html: twofactorTemplate,
-      };
-      // Update tfa code column in db
-      connection.query("UPDATE accounts SET tfa_code = ? WHERE id = ?", [
-        twofactorCode,
-        request.session.tfa_id,
-      ]);
-      // Send tfa email
-      transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-          return console.log(error);
-        }
-        console.log("Message %s sent: %s", info.messageId, info.response);
-      });
-      // Render twofactor template
-      response.render("twofactor.html");
-    } else {
-      // Redirect to login page
-      response.redirect("/login");
-    }
-  })
-);
-// http://localhost:3000/twofactor - twofactor authentication
-app.post("/twofactor", (request, response) => {
-  // Check if the tfa session variables are declared
-  if (request.session.tfa_id && request.session.tfa_email) {
-    // Retrieve account info from database that's associated with the captured email
-    connection.query(
-      "SELECT * FROM accounts WHERE id = ? AND email = ?",
-      [request.session.tfa_id, request.session.tfa_email],
-      (error, accounts) => {
-        // Output msg
-        let msg = "";
-        // If accounts not empty
-        if (accounts.length > 0) {
-          // Check if user submitted the form
-          if (request.body.code) {
-            // Check if captured code and account code match
-            if (request.body.code == accounts[0]["tfa_code"]) {
-              // Get client IP address
-              let ip =
-                request.headers["x-forwarded-for"] ||
-                request.socket.remoteAddress;
-              // Update IP address in db
-              connection.query("UPDATE accounts SET ip = ? WHERE id = ?", [
-                ip,
-                request.session.tfa_id,
-              ]);
-              // Authenticate the user
-              request.session.account_loggedin = true;
-              request.session.account_id = accounts[0].id;
-              request.session.account_username = accounts[0].username;
-              request.session.account_password = accounts[0].password;
-              request.session.account_role = accounts[0].role;
-              // Redirect to home page
-              return response.redirect("/");
-            } else {
-              msg = "Incorrect email and/or code!";
-            }
-          }
-        } else {
-          msg = "Incorrect email and/or code!";
-        }
-        // Render twofactor template
-        response.render("twofactor.html", { msg: msg });
-      }
-    );
-  } else {
-    // Redirect to login page
-    response.redirect("/");
   }
 });
 
@@ -1442,27 +1344,27 @@ app.get("/admin/about", (request, response) =>
   )
 );
 
-// http://localhost:3000/ - View home page
+//View home page
 app.get("/home", (request, response) => {
   response.render("index.html");
 });
 
-// http://localhost:3000/ - View home page
+//View home page
 app.get("/services", (request, response) => {
   response.render("services.html");
 });
 
-// http://localhost:3000/ - View home page
+//View home page
 app.get("/about", (request, response) => {
   response.render("about.html");
 });
 
-// http://localhost:3000/ - View home page
+//View home page
 app.get("/contact", (request, response) => {
   response.render("contact.html");
 });
 
-// http://localhost:3000/ - View home page
+//View home page
 app.get("/", (request, response) => {
   response.render("index.html");
 });
